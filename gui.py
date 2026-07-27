@@ -117,6 +117,9 @@ def load_sidebar():
             row,
             text=chat[1],       # title
             width=170,
+            fg_color="#79DE5D",
+            hover_color="#8FB784",
+            text_color="#2F312F",
             command=lambda cid=chat[0]: open_chat(cid)
         )
         btn.pack(side="left" ,fill="x", expand=True)
@@ -124,8 +127,8 @@ def load_sidebar():
         row,
         text="🗑",
         width=35,
-        fg_color="#153554",
-        hover_color="#78A0BD",
+        fg_color="#2C8912",
+        hover_color="#80BD78",
         command=lambda cid=chat[0]: delete_chat_gui(cid)
     )
         delete_btn.pack(side="right", padx=3)
@@ -137,7 +140,7 @@ sidebar_frame = ctk.CTkFrame(
    main_frame,
    width=220,
    height=650,
-   fg_color="#D2EDC3"
+   fg_color="#F2D0DA"
 )
 sidebar_frame.grid(row=1, column=0, sticky="nsew", padx=(10,5), pady=10)
 
@@ -154,7 +157,10 @@ history.pack(fill="x",padx=10,pady=10)
 new_chat_btn = ctk.CTkButton(
     sidebar_frame,
     text="+ New Chat",
-    command=new_chat
+    command=new_chat,
+    fg_color="#79DE5D",
+    hover_color="#8FB784",
+    text_color="#2F312F"
 )
 new_chat_btn.pack(fill="x", padx=10, pady=10)
 
@@ -170,7 +176,7 @@ chat_list_frame.pack(fill="both", expand=True, padx=5, pady=5)
 details_frame = ctk.CTkScrollableFrame(
     main_frame,
     height=650,
-    fg_color="#D2EDC3"
+    fg_color="#F2D0DA"
 )
 details_frame.grid(row=1, column=1, sticky="nsew", padx=(5,10), pady=10)
 
@@ -208,7 +214,7 @@ def add_message(text, sender="user"):
       bubble_color = "#EC8EA9"
       anchor="e"
     else:
-      bubble_color = "#8CEC74"
+      bubble_color = "#B4E4A8"
       anchor="w"
     bubble = ctk.CTkFrame(
             chat_frame,
@@ -242,10 +248,12 @@ def send_message():
     if current_chat is None:
             current_chat = create_chat()
             load_sidebar()
+
     add_message(user_message, sender="user")
     entry.delete(0, "end")
     save_messages(current_chat, "user", user_message)
     title=get_chat_title(current_chat)
+
     if (title=="New Chat"):
         update_chat_title(current_chat,user_message[:30])
         load_sidebar()
@@ -323,27 +331,36 @@ def recording_stop():
 def process_voice():
     global current_chat
     if current_chat is None:
-        current_chat= create_chat
+        current_chat= create_chat()
         app.after(0, load_sidebar)
+    try:
+        user_message = voice_input()
 
-    user_message = voice_input()
-    recording_stop()
 
-    if user_message is None:
-       return
-    app.after(0, lambda: add_message(user_message, "user"))
-    save_messages(current_chat,"user", user_message)
+        if user_message is None:
+            return
+        app.after(0, lambda: add_message(user_message, "user"))
+        save_messages(current_chat,"user", user_message)
+        title = get_chat_title(current_chat)
+        if title == "New Chat":
+            update_chat_title(current_chat, user_message[:30])
+            app.after(0, load_sidebar)
 
-    response= chat_with_AI(user_message)
-    app.after(0, lambda: add_message(response,"assistant"))
-    save_messages(current_chat,"assistant", response)
+        response= chat_with_AI(user_message)
+        app.after(0, lambda: add_message(response,"assistant"))
+        save_messages(current_chat,"assistant", response)
+    finally:
+        app.after(0, recording_stop)
 
 
 def send_voice():
     recording_start()
     thread= threading.Thread(
-        target=process_voice
+
+        target=process_voice,
+        daemon=True
     )
+    thread.start()
     
 mic_button = ctk.CTkButton(
     bottom_frame,
