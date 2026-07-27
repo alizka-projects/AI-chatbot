@@ -1,9 +1,10 @@
 import customtkinter as ctk
 from main import chat_with_AI
-from database import create_chat,save_messages,get_all,get_messages,createTables
+from tkinter import messagebox
+from database import create_chat,save_messages,get_all,get_messages,createTables,update_chat_title,delete_chat,get_chat_title
 
 BG_COLOR = "#FFF9F5"        # soft off-white background
-FRAME_COLOR = "#F5FAF3"     # very light matcha green
+FRAME_COLOR = "#F8AFC4"     # very light matcha green
 CARD_COLOR = "#FFFDFB"      # clean card
 
 BUTTON_COLOR = "#F8AFC4"    # strawberry pink
@@ -19,13 +20,14 @@ ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
 createTables() 
-current_chat =create_chat()
+current_chat = None
+
 
 app = ctk.CTk()
 app.title("MY CHAT-BOT")
 app.geometry("1300x750")
 app.resizable(True, True)
-app.configure(fg_color=BG_COLOR)
+app.configure(fg_color="#F2D0DA"  )
 
 # ---------------- Main Frame ----------------
 main_frame = ctk.CTkFrame(app, corner_radius=15,fg_color=FRAME_COLOR)
@@ -46,70 +48,142 @@ title = ctk.CTkLabel(
 title.grid(row=0, column=0, columnspan=2,pady=15)
 
 
-def open_chat(chat_id):
-
+def new_chat():
     global current_chat
-
-    current_chat = chat_id
-
-    # purani chat bubbles hatao
+    current_chat = create_chat()
     for widget in chat_frame.winfo_children():
         widget.destroy()
+    add_message(
+        "Hi 👋 I am your AI assistant.",
+        "assistant"
+    )
+    entry.delete(0, "end")
+    load_sidebar()
 
+
+
+def open_chat(chat_id):
+    global current_chat
+    current_chat = chat_id
+    for widget in chat_frame.winfo_children():
+        widget.destroy()
     messages = get_messages(chat_id)
-
     for role, content in messages:
-
         if role == "user":
             add_message(content, "user")
         else:
             add_message(content, "assistant")
 
 
-        
+
+def delete_chat_gui(chat_id):
+    print(chat_id)
+    global current_chat
+    answer = messagebox.askyesno(
+        "Delete Chat",
+        "Are you sure you want to delete this chat?"
+    )
+    if not answer:
+        return
+    delete_chat(chat_id)
+    if current_chat == chat_id:
+        current_chat = None
+        for widget in chat_frame.winfo_children():
+            widget.destroy()
+        add_message(
+                "Start a new conversation 😊",
+                "assistant"
+        )
+    load_sidebar()
+
+
+
+
 def load_sidebar():
-    for widget in sidebar_frame.winfo_children():
+    for widget in chat_list_frame.winfo_children():
         widget.destroy()
-
     chats = get_all()
-
     for chat in chats:
-
+        row = ctk.CTkFrame(
+        chat_list_frame,
+        fg_color="transparent"
+       )
+        row.pack(fill="x", padx=5, pady=5)
         btn = ctk.CTkButton(
-            sidebar_frame,
+            row,
             text=chat[1],       # title
-            width=220,
+            width=170,
             command=lambda cid=chat[0]: open_chat(cid)
         )
+        btn.pack(side="left" ,fill="x", expand=True)
+        delete_btn = ctk.CTkButton(
+        row,
+        text="🗑",
+        width=35,
+        fg_color="#153554",
+        hover_color="#78A0BD",
+        command=lambda cid=chat[0]: delete_chat_gui(cid)
+    )
+        delete_btn.pack(side="right", padx=3)
 
-        btn.pack(fill="x", padx=10, pady=5)
 
-    
-sidebar_frame = ctk.CTkScrollableFrame(
+
+
+sidebar_frame = ctk.CTkFrame(
    main_frame,
    width=220,
    height=650,
-   fg_color=SCROLL_FRAME_COLOR
+   fg_color="#D2EDC3"
 )
 sidebar_frame.grid(row=1, column=0, sticky="nsew", padx=(10,5), pady=10)
+
+history = ctk.CTkLabel(
+    sidebar_frame,
+    text="History",
+    text_color="#2F2F2F",
+    font=("Arial",20,"bold"),
+    corner_radius=20,
+    fg_color="transparent"
+)
+history.pack(fill="x",padx=10,pady=10)
+
+new_chat_btn = ctk.CTkButton(
+    sidebar_frame,
+    text="+ New Chat",
+    command=new_chat
+)
+new_chat_btn.pack(fill="x", padx=10, pady=10)
+
+
+chat_list_frame = ctk.CTkScrollableFrame(
+    sidebar_frame,
+    fg_color="transparent"
+)
+chat_list_frame.pack(fill="both", expand=True, padx=5, pady=5)
+
 
 
 details_frame = ctk.CTkScrollableFrame(
     main_frame,
     height=650,
-    fg_color=SCROLL_FRAME_COLOR
+    fg_color="#D2EDC3"
 )
 details_frame.grid(row=1, column=1, sticky="nsew", padx=(5,10), pady=10)
 
-chat_frame = ctk.CTkScrollableFrame(
+
+
+chat_frame = ctk.CTkFrame(
     details_frame,
     fg_color="transparent"
 )
-
 chat_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+
 
 bottom_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
 bottom_frame.grid(row=2,column=1, pady=10,sticky="ew")
+
+
 entry= ctk.CTkEntry(
     bottom_frame,
     placeholder_text="Ask me anything...",
@@ -122,12 +196,15 @@ entry= ctk.CTkEntry(
     placeholder_text_color="#9CA3AF",
 )
 entry.pack(side="left",fill="x", padx=(5,5))
+
+
+
 def add_message(text, sender="user"):
     if sender == "user":
-      bubble_color = "#F8AFC4"
+      bubble_color = "#EC8EA9"
       anchor="e"
     else:
-      bubble_color = "#CFECC8"
+      bubble_color = "#8CEC74"
       anchor="w"
     bubble = ctk.CTkFrame(
             chat_frame,
@@ -136,7 +213,6 @@ def add_message(text, sender="user"):
             width=500,
             height=50
         )
-
     msg = ctk.CTkLabel(
         bubble,
         text=text,
@@ -146,25 +222,34 @@ def add_message(text, sender="user"):
         font=("Segoe UI", 14)  
     )
     msg.pack(padx=10, pady=5)
-
-    # alignment
     if sender == "user":
         bubble.pack(anchor="e", padx=12, pady=6)
     else:
         bubble.pack(anchor="w", padx=12, pady=6)
 
-def send_message():
 
-    user_message = entry.get()
-    if user_message.strip() == "":
+
+
+def send_message():
+    global current_chat
+    user_message = entry.get().strip()
+    if user_message == "":
        return
+    if current_chat is None:
+            current_chat = create_chat()
+            load_sidebar()
     add_message(user_message, sender="user")
     entry.delete(0, "end")
     save_messages(current_chat, "user", user_message)
-
+    title=get_chat_title(current_chat)
+    if (title=="New Chat"):
+        update_chat_title(current_chat,user_message[:40])
+        load_sidebar()
     response = chat_with_AI(user_message)
     add_message(response, sender="assistant")   
     save_messages(current_chat, "assistant", response)
+
+
 
      
 send_button = ctk.CTkButton(
@@ -180,6 +265,8 @@ send_button = ctk.CTkButton(
   
 )
 send_button.pack(pady=10)
+
+
 
 add_message("Hi 👋 I am your AI assistant. How can I help you?", "assistant")   
 load_sidebar()  

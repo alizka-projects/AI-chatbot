@@ -25,7 +25,6 @@ def createTables():
            FOREIGN KEY(chat_id) REFERENCES chats(chat_id)
            )
     """)
-
     conn.commit()
     conn.close()
 
@@ -60,6 +59,7 @@ def get_all():
     conn.close()
     return chats
 
+
 def get_messages(chat_id):
     conn = connect()
     cursor = conn.cursor()
@@ -73,4 +73,44 @@ def get_messages(chat_id):
     conn.close()
     return messages
 
+
+def update_chat_title(chat_id , chat_title):
+    conn =connect()
+    cursor = conn.cursor()
+    cursor.execute("""UPDATE chats
+                     SET title=? 
+                     WHERE chat_id=?""",
+                     (chat_title , chat_id))
+    conn.commit()
+    conn.close()
+
+
+def get_chat_title(chat_id):
+    conn = connect()
+    cursor = conn.cursor()
+    cursor.execute("""SELECT title 
+                   FROM chats
+                   WHERE chat_id=?""",
+                   (chat_id,))
+    title=cursor.fetchone()[0]
+    conn.commit()
+    conn.close()
+    return title
+
+
+
+def delete_chat(chat_id):
+    conn=connect()
+    cursor = conn.cursor()
+
+    cursor.execute("""DELETE FROM 
+                   messages WHERE
+                   chat_id=?""",
+                   (chat_id,))
     
+    cursor.execute("""DELETE FROM 
+                  chats WHERE 
+                  chat_id=?""",
+                  (chat_id,))
+    conn.commit()
+    conn.close()
