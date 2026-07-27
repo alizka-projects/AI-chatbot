@@ -3,6 +3,8 @@ from main import chat_with_AI
 from tkinter import messagebox
 from database import create_chat,save_messages,get_all,get_messages,createTables,update_chat_title,delete_chat,get_chat_title
 import speech_recognition as sr
+import threading
+
 
 BG_COLOR = "#FFF9F5"        # soft off-white background
 FRAME_COLOR = "#F8AFC4"     # very light matcha green
@@ -21,6 +23,7 @@ ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
 createTables() 
+is_recording = False
 current_chat = None
 
 
@@ -244,7 +247,7 @@ def send_message():
     save_messages(current_chat, "user", user_message)
     title=get_chat_title(current_chat)
     if (title=="New Chat"):
-        update_chat_title(current_chat,user_message[:40])
+        update_chat_title(current_chat,user_message[:30])
         load_sidebar()
     response = chat_with_AI(user_message)
     add_message(response, sender="assistant")   
@@ -265,7 +268,7 @@ send_button = ctk.CTkButton(
     command=send_message,
   
 )
-send_button.pack(pady=10)
+send_button.pack(side= "left",padx=(5,5),pady=0)
 
 def voice_input():
 
@@ -279,21 +282,68 @@ def voice_input():
 
     except:
 
-        return None
+  
+       return None
+
+def recording_start():
+    global is_recording
+    is_recording = True
+
+    mic_button.configure(
+        text="🔴",
+        fg_color="red",
+        hover_color="#FF3B30"
+
+    )
+    send_button.configure(
+        state="disabled"
+    )
+
+    entry.configure(
+        state="disabled"
+    )
+
+def recording_stop():
+    global is_recording
+    is_recording = False
+   
+
+    mic_button.configure(
+        text="🎤",
+        fg_color="#FB7185",
+        hover_color="#F43F5E"
+    )
+    send_button.configure(
+        state="normal"
+    )
+
+    entry.configure(
+        state="normal"
+    )
+def process_voice():
+    global current_chat
+    if current_chat is None:
+        current_chat= create_chat
+        app.after(0, load_sidebar)
+
+    user_message = voice_input()
+    recording_stop()
+
+    if user_message is None:
+       return
+    app.after(0, lambda: add_message(user_message, "user"))
+    save_messages(current_chat,"user", user_message)
+
+    response= chat_with_AI(user_message)
+    app.after(0, lambda: add_message(response,"assistant"))
+    save_messages(current_chat,"assistant", response)
+
 
 def send_voice():
-    user_message = voice_input()
-    if user_message is None:
-        return
-    add_message(user_message, sender="user")
-
-    save_messages(current_chat, "user", user_message)
-
-    response = chat_with_AI(user_message)
-
-    add_message(response, assistant)
-
-    save_messages(current_chat, "assistant", response) 
+    recording_start()
+    thread= threading.Thread(
+        target=process_voice
+    )
     
 mic_button = ctk.CTkButton(
     bottom_frame,
@@ -305,7 +355,7 @@ mic_button = ctk.CTkButton(
     text_color="#FFFFFF",
     command=send_voice
 )
-mic_button.pack(side="left", padx=5)
+mic_button.pack(side="left", padx=(10,5), pady=0)
 
 
 
