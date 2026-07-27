@@ -2,6 +2,7 @@ import customtkinter as ctk
 from main import chat_with_AI
 from tkinter import messagebox
 from database import create_chat,save_messages,get_all,get_messages,createTables,update_chat_title,delete_chat,get_chat_title
+import speech_recognition as sr
 
 BG_COLOR = "#FFF9F5"        # soft off-white background
 FRAME_COLOR = "#F8AFC4"     # very light matcha green
@@ -265,6 +266,46 @@ send_button = ctk.CTkButton(
   
 )
 send_button.pack(pady=10)
+
+def voice_input():
+
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Listening...")
+        audio = recognizer.listen(source)
+    try:
+        text = recognizer.recognize_google(audio)
+        return text
+
+    except:
+
+        return None
+
+def send_voice():
+    user_message = voice_input()
+    if user_message is None:
+        return
+    add_message(user_message, sender="user")
+
+    save_messages(current_chat, "user", user_message)
+
+    response = chat_with_AI(user_message)
+
+    add_message(response, assistant)
+
+    save_messages(current_chat, "assistant", response) 
+    
+mic_button = ctk.CTkButton(
+    bottom_frame,
+    text="🎤",
+    width=60,
+    corner_radius=100,
+    fg_color="#FB7185",
+    hover_color="#F43F5E",
+    text_color="#FFFFFF",
+    command=send_voice
+)
+mic_button.pack(side="left", padx=5)
 
 
 
