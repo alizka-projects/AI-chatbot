@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from main import chat_with_AI
 from tkinter import messagebox
-from database import create_chat,save_messages,get_all,get_messages,createTables,update_chat_title,delete_chat,get_chat_title
+import database as db
 import speech_recognition as sr
 import threading
 
@@ -22,7 +22,7 @@ SCROLL_FRAME_COLOR = "#FFFDFB"  # pastel pink (your chat area)
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
-createTables() 
+db.createTables() 
 is_recording = False
 current_chat = None
 
@@ -49,12 +49,12 @@ title = ctk.CTkLabel(
     font=("Segoe UI", 28, "bold"),
     text_color="#2F2F2F",
 )
-title.grid(row=0, column=0, columnspan=2,pady=15)
+title.grid(row=0, column=0, columnspan=2 ,pady=15)
 
 
 def new_chat():
     global current_chat
-    current_chat = create_chat()
+    current_chat = db.create_chat()
     for widget in chat_frame.winfo_children():
         widget.destroy()
     add_message(
@@ -71,7 +71,7 @@ def open_chat(chat_id):
     current_chat = chat_id
     for widget in chat_frame.winfo_children():
         widget.destroy()
-    messages = get_messages(chat_id)
+    messages = db.get_messages(chat_id)
     for role, content in messages:
         if role == "user":
             add_message(content, "user")
@@ -81,7 +81,6 @@ def open_chat(chat_id):
 
 
 def delete_chat_gui(chat_id):
-    print(chat_id)
     global current_chat
     answer = messagebox.askyesno(
         "Delete Chat",
@@ -89,7 +88,7 @@ def delete_chat_gui(chat_id):
     )
     if not answer:
         return
-    delete_chat(chat_id)
+    db.delete_chat(chat_id)
     if current_chat == chat_id:
         current_chat = None
         for widget in chat_frame.winfo_children():
@@ -102,11 +101,10 @@ def delete_chat_gui(chat_id):
 
 
 
-
 def load_sidebar():
     for widget in chat_list_frame.winfo_children():
         widget.destroy()
-    chats = get_all()
+    chats = db.get_all()
     for chat in chats:
         row = ctk.CTkFrame(
         chat_list_frame,
@@ -181,13 +179,11 @@ details_frame = ctk.CTkScrollableFrame(
 details_frame.grid(row=1, column=1, sticky="nsew", padx=(5,10), pady=10)
 
 
-
 chat_frame = ctk.CTkFrame(
     details_frame,
     fg_color="transparent"
 )
 chat_frame.pack(fill="both", expand=True, padx=10, pady=10)
-
 
 
 bottom_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
@@ -246,20 +242,20 @@ def send_message():
     if user_message == "":
        return
     if current_chat is None:
-            current_chat = create_chat()
+            current_chat = db.create_chat()
             load_sidebar()
 
     add_message(user_message, sender="user")
     entry.delete(0, "end")
-    save_messages(current_chat, "user", user_message)
-    title=get_chat_title(current_chat)
+    db.save_messages(current_chat, "user", user_message)
+    title=db.get_chat_title(current_chat)
 
     if (title=="New Chat"):
-        update_chat_title(current_chat,user_message[:30])
+        db.update_chat_title(current_chat,user_message[:30])
         load_sidebar()
     response = chat_with_AI(user_message)
     add_message(response, sender="assistant")   
-    save_messages(current_chat, "assistant", response)
+    db.save_messages(current_chat, "assistant", response)
 
 
 
@@ -289,8 +285,6 @@ def voice_input():
         return text
 
     except:
-
-  
        return None
 
 def recording_start():
@@ -331,7 +325,7 @@ def recording_stop():
 def process_voice():
     global current_chat
     if current_chat is None:
-        current_chat= create_chat()
+        current_chat= db.create_chat()
         app.after(0, load_sidebar)
     try:
         user_message = voice_input()
@@ -340,15 +334,15 @@ def process_voice():
         if user_message is None:
             return
         app.after(0, lambda: add_message(user_message, "user"))
-        save_messages(current_chat,"user", user_message)
-        title = get_chat_title(current_chat)
+        db.save_messages(current_chat,"user", user_message)
+        title = db.get_chat_title(current_chat)
         if title == "New Chat":
-            update_chat_title(current_chat, user_message[:30])
+            db.update_chat_title(current_chat, user_message[:30])
             app.after(0, load_sidebar)
 
         response= chat_with_AI(user_message)
         app.after(0, lambda: add_message(response,"assistant"))
-        save_messages(current_chat,"assistant", response)
+        db.save_messages(current_chat,"assistant", response)
     finally:
         app.after(0, recording_stop)
 
@@ -379,3 +373,4 @@ mic_button.pack(side="left", padx=(10,5), pady=0)
 add_message("Hi 👋 I am your AI assistant. How can I help you?", "assistant")   
 load_sidebar()  
 app.mainloop()
+
